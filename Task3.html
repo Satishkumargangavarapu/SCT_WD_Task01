@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tic-Tac-Toe Pro</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      text-align: center;
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 15px rgba(0,255,255,0.2);
+      width: 90%;
+      max-width: 600px;
+    }
+    h1 { color: #00ffe5; }
+    .subtitle, .status, .players { color: #cbd5e1; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      font-size: 2.5em;
+      background: #334155;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .cell:hover { transform: scale(1.05); background: #475569; }
+    .cell.x { color: #38bdf8; }
+    .cell.o { color: #f97316; }
+    .cell.win { background: #10b981 !important; }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      background: #00ffe5;
+      color: #1e293b;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    input[type="text"] {
+      padding: 10px;
+      width: 80%;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: none;
+    }
+    .scoreboard {
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div id="modeScreen">
+    <h1>Tic-Tac-Toe Pro</h1>
+    <p class="subtitle">Choose Game Mode</p>
+    <button onclick="selectMode('friend')">Play with Friend</button>
+    <button onclick="selectMode('computer')">Play with Computer</button>
+  </div>
+
+  <div id="nameScreen" style="display:none;">
+    <h2>Enter Player Names</h2>
+    <input id="playerX" placeholder="Player X Name" /><br />
+    <input id="playerO" placeholder="Player O Name" /><br />
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <div id="gameScreen" style="display:none;">
+    <h1>Tic-Tac-Toe</h1>
+    <p class="players" id="playerNames"></p>
+    <p class="status" id="status"></p>
+    <div class="board" id="board"></div>
+    <div class="scoreboard">
+      <span id="scoreX">X: 0</span> | <span id="scoreO">O: 0</span> | <span id="draws">Draws: 0</span>
+    </div>
+  </div>
+
+  <div id="endScreen" style="display:none;">
+    <h2 id="resultMsg"></h2>
+    <button onclick="playAgain()">Play Again</button>
+    <button onclick="goBack()">Back to Menu</button>
+  </div>
+</div>
+
+<audio id="moveSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+<audio id="winSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="drawSound" src="https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg"></audio>
+
+<script>
+  const board = document.getElementById('board');
+  const statusText = document.getElementById('status');
+  const resultMsg = document.getElementById('resultMsg');
+  const moveSound = document.getElementById('moveSound');
+  const winSound = document.getElementById('winSound');
+  const drawSound = document.getElementById('drawSound');
+
+  let gameMode = '';
+  let playerX = 'X';
+  let playerO = 'O';
+  let currentPlayer = 'X';
+  let gameActive = true;
+  let gameState = Array(9).fill('');
+  let scores = { X: 0, O: 0, Draws: 0 };
+
+  const winPatterns = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function selectMode(mode) {
+    gameMode = mode;
+    document.getElementById('modeScreen').style.display = 'none';
+    if (mode === 'friend') {
+      document.getElementById('nameScreen').style.display = 'block';
+    } else {
+      playerX = 'You';
+      playerO = 'Computer';
+      startGame();
+    }
+  }
+
+  function startGame() {
+    if (gameMode === 'friend') {
+      playerX = document.getElementById('playerX').value || 'Player X';
+      playerO = document.getElementById('playerO').value || 'Player O';
+    }
+    gameState.fill('');
+    currentPlayer = 'X';
+    gameActive = true;
+    document.getElementById('playerNames').textContent = `${playerX} (X) vs ${playerO} (O)`;
+    document.getElementById('nameScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'block';
+    renderBoard();
+    statusText.textContent = `${playerX}'s turn`;
+  }
+
+  function renderBoard() {
+    board.innerHTML = '';
+    gameState.forEach((val, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.textContent = val;
+      if (val) cell.classList.add(val.toLowerCase());
+      cell.addEventListener('click', () => handleMove(i));
+      board.appendChild(cell);
+    });
+  }
+
+  function handleMove(index) {
+    if (!gameActive || gameState[index]) return;
+    gameState[index] = currentPlayer;
+    moveSound.play();
+    renderBoard();
+    if (checkWin()) return;
+    if (!gameState.includes('')) return endGame('Draw');
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    statusText.textContent = `${(currentPlayer === 'X' ? playerX : playerO)}'s turn`;
+    if (gameMode === 'computer' && currentPlayer === 'O') setTimeout(computerMove, 400);
+  }
+
+  function checkWin() {
+    for (const combo of winPatterns) {
+      const [a,b,c] = combo;
+      if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+        document.querySelectorAll('.cell')[a].classList.add('win');
+        document.querySelectorAll('.cell')[b].classList.add('win');
+        document.querySelectorAll('.cell')[c].classList.add('win');
+        endGame(`${gameState[a]} Wins`);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function computerMove() {
+    let bestScore = -Infinity;
+    let move;
+    gameState.forEach((val, idx) => {
+      if (val === '') {
+        gameState[idx] = 'O';
+        let score = minimax(gameState, 0, false);
+        gameState[idx] = '';
+        if (score > bestScore) {
+          bestScore = score;
+          move = idx;
+        }
+      }
+    });
+    handleMove(move);
+  }
+
+  function minimax(state, depth, isMaximizing) {
+    const winner = evaluate(state);
+    if (winner !== null) return winner;
+
+    if (isMaximizing) {
+      let maxEval = -Infinity;
+      for (let i = 0; i < state.length; i++) {
+        if (state[i] === '') {
+          state[i] = 'O';
+          const eval = minimax(state, depth + 1, false);
+          state[i] = '';
+          maxEval = Math.max(maxEval, eval);
+        }
+      }
+      return maxEval;
+    } else {
+      let minEval = Infinity;
+      for (let i = 0; i < state.length; i++) {
+        if (state[i] === '') {
+          state[i] = 'X';
+          const eval = minimax(state, depth + 1, true);
+          state[i] = '';
+          minEval = Math.min(minEval, eval);
+        }
+      }
+      return minEval;
+    }
+  }
+
+  function evaluate(state) {
+    for (const [a, b, c] of winPatterns) {
+      if (state[a] && state[a] === state[b] && state[b] === state[c]) {
+        return state[a] === 'O' ? 1 : -1;
+      }
+    }
+    if (!state.includes('')) return 0;
+    return null;
+  }
+
+  function endGame(msg) {
+    gameActive = false;
+    if (msg.includes('X')) scores.X++;
+    else if (msg.includes('O')) scores.O++;
+    else scores.Draws++;
+    document.getElementById('scoreX').textContent = `X: ${scores.X}`;
+    document.getElementById('scoreO').textContent = `O: ${scores.O}`;
+    document.getElementById('draws').textContent = `Draws: ${scores.Draws}`;
+    resultMsg.textContent = msg;
+    msg.includes('Draw') ? drawSound.play() : winSound.play();
+    document.getElementById('gameScreen').style.display = 'none';
+    document.getElementById('endScreen').style.display = 'block';
+  }
+
+  function playAgain() {
+    gameState.fill('');
+    currentPlayer = 'X';
+    gameActive = true;
+    statusText.textContent = `${playerX}'s turn`;
+    document.getElementById('endScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'block';
+    renderBoard();
+  }
+
+  function goBack() {
+    document.getElementById('endScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'none';
+    document.getElementById('modeScreen').style.display = 'block';
+    scores = { X: 0, O: 0, Draws: 0 };
+    document.getElementById('scoreX').textContent = 'X: 0';
+    document.getElementById('scoreO').textContent = 'O: 0';
+    document.getElementById('draws').textContent = 'Draws: 0';
+  }
+</script>
+</body>
+</html>
