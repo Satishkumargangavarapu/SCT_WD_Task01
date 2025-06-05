@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stopwatch with Laps</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            transition: background 0.5s ease;
+        }
+        .stopwatch {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+            position: relative;
+            width: 350px;
+        }
+        .clock-face {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+            border: 8px solid #333;
+            border-radius: 50%;
+            position: relative;
+            background: radial-gradient(circle, #fff, #e0e0e0);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        .second-hand {
+            width: 2px;
+            height: 80px;
+            background: #ff4b2b;
+            position: absolute;
+            top: 20px; /* Corrected to align bottom with clock center */
+            left: 50%;
+            transform-origin: bottom;
+            transform: translateX(-50%) rotate(0deg);
+        }
+        .clock-number {
+            position: absolute;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            color: #1e3c72;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .number-12 { top: 10px; left: 50%; transform: translateX(-50%); }
+        .number-3 { top: 50%; right: 10px; transform: translateY(-50%); }
+        .number-6 { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .number-9 { top: 50%; left: 10px; transform: translateY(-50%); }
+        .tick {
+            position: absolute;
+            width: 2px;
+            height: 8px;
+            background: #333;
+            left: 50%;
+            transform-origin: bottom;
+            transform: translateX(-50%);
+        }
+        .tick-1 { top: 10px; transform: translateX(-50%) rotate(30deg); }
+        .tick-2 { top: 10px; transform: translateX(-50%) rotate(60deg); }
+        .tick-4 { top: 10px; transform: translateX(-50%) rotate(120deg); }
+        .tick-5 { top: 10px; transform: translateX(-50%) rotate(150deg); }
+        .tick-7 { top: 10px; transform: translateX(-50%) rotate(210deg); }
+        .tick-8 { top: 10px; transform: translateX(-50%) rotate(240deg); }
+        .tick-10 { top: 10px; transform: translateX(-50%) rotate(300deg); }
+        .tick-11 { top: 10px; transform: translateX(-50%) rotate(330deg); }
+        #display {
+            font-size: 48px;
+            font-family: 'Orbitron', sans-serif;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            letter-spacing: 3px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .controls button {
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .controls button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        .controls button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        .controls button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300%;
+            height: 300%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.4s;
+            border-radius: 50%;
+        }
+        .controls button:hover::after {
+            transform: translate(-50%, -50%) scale(1);
+        }
+        #startBtn {
+            background: linear-gradient(45deg, #28a745, #34c759);
+            color: white;
+        }
+        #startBtn:hover {
+            background: linear-gradient(45deg, #218838, #2cb44e);
+        }
+        #stopBtn {
+            background: linear-gradient(45deg, #dc3545, #ff4b2b);
+            color: white;
+        }
+        #stopBtn:hover {
+            background: linear-gradient(45deg, #c82333, #e03e2d);
+        }
+        #resetBtn {
+            background: linear-gradient(45deg, #007bff, #00c4ff);
+            color: white;
+        }
+        #resetBtn:hover {
+            background: linear-gradient(45deg, #0069d9, #00a8cc);
+        }
+        #lapBtn {
+            background: linear-gradient(45deg, #ffc107, #ffca28);
+            color: white;
+        }
+        #lapBtn:hover {
+            background: linear-gradient(45deg, #e0a800, #f0b500);
+        }
+        #stopBtn:disabled, #startBtn:disabled, #lapBtn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        #laps {
+            margin-top: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+            text-align: left;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            color: #1e3c72;
+        }
+        #laps div {
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+            transition: background 0.2s;
+        }
+        #laps div:hover {
+            background: rgba(0, 123, 255, 0.1);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="stopwatch">
+        <div class="clock-face">
+            <div class="second-hand" id="secondHand"></div>
+            <div class="clock-number number-12">12</div>
+            <div class="clock-number number-3">3</div>
+            <div class="clock-number number-6">6</div>
+            <div class="clock-number number-9">9</div>
+            <div class="tick tick-1"></div>
+            <div class="tick tick-2"></div>
+            <div class="tick tick-4"></div>
+            <div class="tick tick-5"></div>
+            <div class="tick tick-7"></div>
+            <div class="tick tick-8"></div>
+            <div class="tick tick-10"></div>
+            <div class="tick tick-11"></div>
+        </div>
+        <div id="display">00:00:00.000</div>
+        <div class="controls">
+            <button id="startBtn">Start</button>
+            <button id="stopBtn">Stop</button>
+            <button id="resetBtn">Reset</button>
+            <button id="lapBtn">Lap</button>
+        </div>
+        <div id="laps"></div>
+    </div>
+
+    <script>
+        let startTime = 0;
+        let elapsedTime = 0;
+        let timerInterval;
+        let lapTimes = [];
+        let lastLapTime = 0;
+        const display = document.getElementById('display');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const lapBtn = document.getElementById('lapBtn');
+        const lapsContainer = document.getElementById('laps');
+        const secondHand = document.getElementById('secondHand');
+        const body = document.body;
+
+        // Speech synthesis setup
+        const synth = window.speechSynthesis;
+        let voices = [];
+        let robotVoice = null;
+
+        // Load voices and select a robotic-sounding one
+        function loadVoices() {
+            voices = synth.getVoices();
+            robotVoice = voices.find(voice => voice.name.includes('Google') || voice.name.includes('Microsoft') || voice.name.includes('Roboto')) || voices[0];
+        }
+
+        // Call loadVoices immediately and on voiceschanged event
+        loadVoices();
+        synth.onvoiceschanged = loadVoices;
+
+        // Function to speak a message
+        function speak(text) {
+            if (synth && robotVoice) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.voice = robotVoice;
+                utterance.pitch = 0.8;
+                utterance.rate = 1.0;
+                synth.speak(utterance);
+            }
+        }
+
+        function timeToString(time) {
+            let diffInHrs = time / 3600000;
+            let hh = Math.floor(diffInHrs);
+            let diffInMin = (diffInHrs - hh) * 60;
+            let mm = Math.floor(diffInMin);
+            let diffInSec = (diffInMin - mm) * 60;
+            let ss = Math.floor(diffInSec);
+            let diffInMs = (diffInSec - ss) * 1000;
+            let ms = Math.floor(diffInMs);
+            
+            hh = hh.toString().padStart(2, '0');
+            mm = mm.toString().padStart(2, '0');
+            ss = ss.toString().padStart(2, '0');
+            ms = ms.toString().padStart(3, '0');
+            
+            return ${hh}:${mm}:${ss}.${ms};
+        }
+
+        function updateSecondHand() {
+            const seconds = (elapsedTime / 1000) % 60;
+            const degrees = (seconds / 60) * 360;
+            secondHand.style.transform = translateX(-50%) rotate(${degrees}deg);
+        }
+
+        function start() {
+            startTime = Date.now() - elapsedTime;
+            timerInterval = setInterval(() => {
+                elapsedTime = Date.now() - startTime;
+                display.textContent = timeToString(elapsedTime);
+                updateSecondHand();
+            }, 10);
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            lapBtn.disabled = false;
+            body.style.background = 'linear-gradient(135deg, #00c4b4, #7b61ff)';
+            speak('Stopwatch started');
+        }
+
+        function stop() {
+            clearInterval(timerInterval);
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            lapBtn.disabled = true;
+            body.style.background = 'linear-gradient(135deg, #ff416c, #ff4b2b)';
+            speak('Stopwatch stopped');
+        }
+
+        function reset() {
+            clearInterval(timerInterval);
+            elapsedTime = 0;
+            lastLapTime = 0;
+            lapTimes = [];
+            display.textContent = '00:00:00.000';
+            secondHand.style.transform = 'translateX(-50%) rotate(0deg)';
+            lapsContainer.innerHTML = '';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            lapBtn.disabled = true;
+            body.style.background = 'linear-gradient(135deg, #1e3c72, #2a5298)';
+        }
+
+        function lap() {
+            const currentLapTime = elapsedTime - lastLapTime;
+            lapTimes.push(currentLapTime);
+            lastLapTime = elapsedTime;
+            const lapDiv = document.createElement('div');
+            lapDiv.textContent = `Lap ${lapTimes.length}: ${timeToString(currentLapTime)}`;
+            lapsContainer.prepend(lapDiv);
+        }
+
+        startBtn.addEventListener('click', start);
+        stopBtn.addEventListener('click', stop);
+        resetBtn.addEventListener('click', reset);
+        lapBtn.addEventListener('click', lap);
+
+        // Initial button states
+        stopBtn.disabled = true;
+        lapBtn.disabled = true;
+    </script>
+</body>
+</html>
